@@ -84,11 +84,6 @@ export const userAPI = {
   updateProfile: (userData) => api.patch('/profile/', userData),
 };
 
-// Doctor API
-export const doctorAPI = {
-  getNearbyDoctors: (locationData) => api.post('/doctors/nearby/', locationData),
-};
-
 // Appointment API
 export const appointmentAPI = {
   getAppointments: () => api.get('/appointments/'),
@@ -96,20 +91,6 @@ export const appointmentAPI = {
   createAppointment: (appointmentData) => api.post('/appointments/', appointmentData),
   updateAppointment: (id, status) => api.patch(`/appointments/${id}/`, { status }),
   cancelAppointment: (id) => api.patch(`/appointments/${id}/`, { status: 'cancelled' }),
-};
-
-// Diagnosis API
-export const diagnosisAPI = {
-  predict: (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post('/predict/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
-  getHistory: () => api.get('/diagnosis/history/'),
 };
 
 export default api;

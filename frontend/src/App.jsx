@@ -10,9 +10,7 @@ import Signup from "./pgs/Signup";
 import './index.css'; // or whatever you named your CSS file
 const Login = lazy(() => import("./pgs/Login"));
 const About = lazy(() => import("./pgs/About"));
-const Upload = lazy(() => import("./pgs/Upload"));
 const MyProfile = lazy(() => import("./pgs/MyProfile"));
-const FindDermatologist = lazy(() => import("./pgs/FindDermatologist"));
 const AIChatAssistant = lazy(() => import("./components/AIChatAssistant"));
 
 
@@ -46,22 +44,6 @@ const App = () => {
               <Route path="/about" element={<About />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              <Route
-                path="/upload"
-                element={
-                  <PrivateRoute>
-                    <Upload />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/find-doctor"
-                element={
-                  <PrivateRoute>
-                    <FindDermatologist />
-                  </PrivateRoute>
-                }
-              />
               <Route
                 path="/profile"
                 element={

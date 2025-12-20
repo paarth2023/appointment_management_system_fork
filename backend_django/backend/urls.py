@@ -19,9 +19,9 @@ router.register(r"resources", ResourceViewSet, basename="resource")
 router.register(r"bookings", BookingViewSet, basename="booking")
 
 urlpatterns = [
-    path("register/", RegisterView.as_view()),
-    path("login/", LoginView.as_view()),
-    path("token/refresh/", TokenRefreshView.as_view()),
+    path("auth/register/", RegisterView.as_view()),
+    path("auth/login/", LoginView.as_view()),
+    path("auth/refresh/", TokenRefreshView.as_view()),
     path("profile/", ProfileView.as_view()),
 
     path(
