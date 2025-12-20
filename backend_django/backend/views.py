@@ -12,6 +12,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
+from rest_framework.generics import DestroyAPIView
+from rest_framework.exceptions import NotFound
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.token_blacklist.models import (
     OutstandingToken,
@@ -312,6 +314,26 @@ class AdminBookingListView(generics.ListAPIView):
 #     serializer_class = PaymentSerializer
 #     queryset = Payment.objects.select_related("booking").all()
 
+class AdminBookingDeleteView(DestroyAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = BookingSerializer
+    lookup_url_kwarg = "booking_id"
+
+    def get_queryset(self):
+        return Booking.objects.select_related("slot")
+
+    def perform_destroy(self, booking):
+        with transaction.atomic():
+            slot = booking.slot
+
+            # Adjust slot capacity safely
+            slot.booked_count = max(
+                0,
+                slot.booked_count - booking.quantity
+            )
+            slot.save(update_fields=["booked_count"])
+
+            booking.delete()
 class ServiceViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
