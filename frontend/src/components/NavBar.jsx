@@ -22,7 +22,7 @@ const NavBar = () => {
     { to: '/about', label: 'About', always: true },
     { to: '/login', label: 'Login', auth: false },
     { to: '/signup', label: 'Signup', auth: false },
-    { to: '/profile', label: 'My Profile', auth: true },
+    { to: '/dashboard', label: 'Dashboard', auth: true },
   ];
 
   const filteredLinks = navLinks.filter(link =>

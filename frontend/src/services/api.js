@@ -93,4 +93,22 @@ export const appointmentAPI = {
   cancelAppointment: (id) => api.patch(`/appointments/${id}/`, { status: 'cancelled' }),
 };
 
+// Service API
+export const serviceAPI = {
+  getServices: () => api.get('/services/'),
+  getService: (id) => api.get(`/services/${id}/`),
+  createService: (serviceData) => api.post('/services/', serviceData),
+  updateService: (id, serviceData) => api.patch(`/services/${id}/`, serviceData),
+  deleteService: (id) => api.delete(`/services/${id}/`),
+};
+
+// Booking API
+export const bookingAPI = {
+  getBookings: () => api.get('/bookings/'),
+  getBooking: (id) => api.get(`/bookings/${id}/`),
+  createBooking: (bookingData) => api.post('/bookings/', bookingData),
+  updateBooking: (id, bookingData) => api.patch(`/bookings/${id}/`, bookingData),
+  deleteBooking: (id) => api.delete(`/bookings/${id}/`),
+};
+
 export default api;

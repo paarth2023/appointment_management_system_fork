@@ -21,7 +21,7 @@ import { login } from '../slices/authSlice';
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
+  const { isAuthenticated, loading, error, user } = useSelector((state) => state.auth);
 
   const form = useForm({
     initialValues: {
@@ -44,8 +44,10 @@ const Login = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/profile');
-  }, [isAuthenticated]);
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-20 w-full">

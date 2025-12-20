@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { MantineProvider, ActionIcon, Drawer } from '@mantine/core';
 import { MessageCircle } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -10,7 +10,8 @@ import Signup from "./pgs/Signup";
 import './index.css'; // or whatever you named your CSS file
 const Login = lazy(() => import("./pgs/Login"));
 const About = lazy(() => import("./pgs/About"));
-const MyProfile = lazy(() => import("./pgs/MyProfile"));
+const Dashboard = lazy(() => import("./pgs/Appointments"));
+const AppointmentForm = lazy(() => import("./pgs/AppointmentForm"));
 const AIChatAssistant = lazy(() => import("./components/AIChatAssistant"));
 
 
@@ -22,7 +23,9 @@ function PrivateRoute({ children }) {
 const App = () => {
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const dispatch = useDispatch();
+  const location = useLocation();
   const { tokens } = useSelector(state => state.auth);
+  const hideNavBar = location.pathname.includes('/dashboard/') && location.pathname !== '/dashboard';
 
   useEffect(() => {
     let interval;
@@ -36,8 +39,8 @@ const App = () => {
   return (
     <MantineProvider withGlobalStyles withNormalizeCSS>
       <div className="relative flex flex-col min-h-screen">
-        <NavBar />
-        <div className="flex items-center justify-center flex-grow pt-20 bg-gray-50">
+        {!hideNavBar && <NavBar />}
+        <div className={`flex items-center justify-center flex-grow ${hideNavBar ? '' : 'pt-20'} bg-gray-50`}>
           <Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -45,10 +48,26 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route
-                path="/profile"
+                path="/dashboard"
                 element={
                   <PrivateRoute>
-                    <MyProfile />
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/dashboard/:id/edit"
+                element={
+                  <PrivateRoute>
+                    <AppointmentForm />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/dashboard/new"
+                element={
+                  <PrivateRoute>
+                    <AppointmentForm />
                   </PrivateRoute>
                 }
               />

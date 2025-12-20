@@ -1,0 +1,810 @@
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { 
+  Upload, 
+  X, 
+  Eye, 
+  FileText, 
+  Settings as SettingsIcon, 
+  BarChart3,
+  Calendar,
+  Plus,
+  Trash2
+} from 'lucide-react';
+
+const AppointmentForm = () => {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = !!id;
+
+  // Form state
+  const [formData, setFormData] = useState({
+    title: 'Dental care',
+    duration: '00:30',
+    location: "Doctor's Office",
+    bookBy: 'user',
+    assignment: 'automatically',
+    manageCapacity: true,
+    capacity: 1,
+  });
+
+  const [selectedUsers, setSelectedUsers] = useState(['A1 User 1', 'A2 User 2']);
+  const [activeTab, setActiveTab] = useState('schedule');
+
+  // Answer type options for dialog
+  const answerTypeOptions = [
+    'Single line text',
+    'Multi-line text',
+    'Phone Number',
+    'Radio (One Answer)',
+    'Checkboxes (Multiple Answers)',
+  ];
+
+  // Answer type options for table dropdown
+  const answerTypes = [
+    'Single line text',
+    'Multi line text',
+    'Phone number',
+    'Email',
+    'Number',
+    'Date',
+    'Time',
+    'Dropdown',
+    'Checkbox',
+    'Radio button',
+  ];
+
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newQuestion, setNewQuestion] = useState({
+    question: '',
+    answerType: 'Single line text',
+    mandatory: false,
+  });
+
+  // Dummy questions data
+  const [questions, setQuestions] = useState([
+    {
+      id: 1,
+      question: 'Name',
+      answerType: 'Single line text',
+      answer: 'Vipin jindal',
+      mandatory: false,
+    },
+    {
+      id: 2,
+      question: 'Phone',
+      answerType: 'Phone number',
+      answer: '9874563210',
+      mandatory: false,
+    },
+    {
+      id: 3,
+      question: 'Symptoms',
+      answerType: 'Single line text',
+      answer: 'Cough',
+      mandatory: false,
+    },
+  ]);
+
+  // Dummy schedule data
+  const [schedule, setSchedule] = useState([
+    { id: 1, day: 'Monday', from: '9:00', to: '12:00' },
+    { id: 2, day: 'Monday', from: '14:00', to: '17:00' },
+    { id: 3, day: 'Tuesday', from: '9:00', to: '12:00' },
+    { id: 4, day: 'Tuesday', from: '14:00', to: '17:00' },
+    { id: 5, day: 'Wednesday', from: '9:00', to: '12:00' },
+    { id: 6, day: 'Wednesday', from: '14:00', to: '17:00' },
+    { id: 7, day: 'Thursday', from: '9:00', to: '12:00' },
+    { id: 8, day: 'Thursday', from: '14:00', to: '17:00' },
+    { id: 9, day: 'Friday', from: '9:00', to: '12:00' },
+    { id: 10, day: 'Friday', from: '14:00', to: '17:00' },
+  ]);
+
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  const handleAddScheduleLine = () => {
+    const newId = schedule.length > 0 ? Math.max(...schedule.map(s => s.id)) + 1 : 1;
+    setSchedule([...schedule, { id: newId, day: 'Monday', from: '9:00', to: '17:00' }]);
+  };
+
+  const handleDeleteSchedule = (id) => {
+    setSchedule(schedule.filter(s => s.id !== id));
+  };
+
+  const handleUpdateSchedule = (id, field, value) => {
+    setSchedule(schedule.map(s => 
+      s.id === id ? { ...s, [field]: value } : s
+    ));
+  };
+
+  const handleAddQuestionClick = () => {
+    setNewQuestion({
+      question: '',
+      answerType: 'Single line text',
+      mandatory: false,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSaveQuestion = () => {
+    if (!newQuestion.question.trim()) {
+      return; // Don't save if question is empty
+    }
+    const newId = questions.length > 0 ? Math.max(...questions.map(q => q.id)) + 1 : 1;
+    setQuestions([
+      ...questions,
+      {
+        id: newId,
+        question: newQuestion.question,
+        answerType: newQuestion.answerType,
+        answer: '',
+        mandatory: newQuestion.mandatory,
+      },
+    ]);
+    setDialogOpen(false);
+    setNewQuestion({
+      question: '',
+      answerType: 'Single line text',
+      mandatory: false,
+    });
+  };
+
+  const handleDeleteQuestion = (id) => {
+    setQuestions(questions.filter(q => q.id !== id));
+  };
+
+  const handleUpdateQuestion = (id, field, value) => {
+    setQuestions(questions.map(q => 
+      q.id === id ? { ...q, [field]: value } : q
+    ));
+  };
+
+  const toggleUser = (user) => {
+    if (selectedUsers.includes(user)) {
+      setSelectedUsers(selectedUsers.filter(u => u !== user));
+    } else {
+      setSelectedUsers([...selectedUsers, user]);
+    }
+  };
+
+  // Render appropriate input based on answer type
+  const renderAnswerInput = (question) => {
+    const { id, answerType, answer } = question;
+
+    switch (answerType) {
+      case 'Single line text':
+      case 'Email':
+        return (
+          <Input
+            type={answerType === 'Email' ? 'email' : 'text'}
+            value={answer}
+            onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+            placeholder={answerType === 'Email' ? 'email@example.com' : 'Enter answer'}
+            className="w-full"
+          />
+        );
+
+      case 'Multi line text':
+        return (
+          <textarea
+            value={answer}
+            onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+            placeholder="Enter answer"
+            rows={2}
+            className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          />
+        );
+
+      case 'Phone number':
+        return (
+          <Input
+            type="tel"
+            value={answer}
+            onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+            placeholder="+1 (555) 123-4567"
+            className="w-full"
+          />
+        );
+
+      case 'Number':
+        return (
+          <Input
+            type="number"
+            value={answer}
+            onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+            placeholder="Enter number"
+            className="w-full"
+          />
+        );
+
+      case 'Date':
+        return (
+          <Input
+            type="date"
+            value={answer}
+            onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+            className="w-full"
+          />
+        );
+
+      case 'Time':
+        return (
+          <Input
+            type="time"
+            value={answer}
+            onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+            className="w-full"
+          />
+        );
+
+      case 'Dropdown':
+        return (
+          <div className="space-y-1">
+            <Input
+              value={answer}
+              onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+              placeholder="Option1, Option2, Option3"
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500">Comma-separated options</p>
+          </div>
+        );
+
+      case 'Checkbox':
+        return (
+          <div className="space-y-1">
+            <Input
+              value={answer}
+              onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+              placeholder="Option1, Option2, Option3"
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500">Comma-separated options</p>
+          </div>
+        );
+
+      case 'Radio button':
+        return (
+          <div className="space-y-1">
+            <Input
+              value={answer}
+              onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+              placeholder="Option1, Option2, Option3"
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500">Comma-separated options</p>
+          </div>
+        );
+
+      default:
+        return (
+          <Input
+            value={answer}
+            onChange={(e) => handleUpdateQuestion(id, 'answer', e.target.value)}
+            placeholder="Enter answer"
+            className="w-full"
+          />
+        );
+    }
+  };
+
+  return (
+    <div className="w-full min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <img src="/logo-white.png" alt="Logo" className="h-8 w-8" />
+                <span className="text-xl font-bold text-teal-600">NeoDermaScan</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/reporting')}
+                className="flex items-center gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Reporting
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/settings')}
+                className="flex items-center gap-2"
+              >
+                <SettingsIcon className="h-4 w-4" />
+                Settings
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/meetings')}
+                className="flex items-center gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                Meetings
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Action Buttons */}
+        <div className="mb-6 flex items-center justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/dashboard/new')}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {/* Preview functionality */}}
+            className="flex items-center gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            Preview
+          </Button>
+          <Button
+            onClick={() => {/* Publish functionality */}}
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Publish
+          </Button>
+        </div>
+
+        {/* Appointment Details Section */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Appointment Title */}
+              <div>
+                <Label htmlFor="title" className="mb-2 block">Appointment title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Dental care"
+                  className="w-full"
+                />
+              </div>
+
+              {/* Duration and Location */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="duration" className="mb-2 block">Duration</Label>
+                  <Input
+                    id="duration"
+                    type="text"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                    placeholder="00:30 Hours"
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="location" className="mb-2 block">Location</Label>
+                  <Input
+                    id="location"
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="Doctor's Office"
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    IF Location is not set, consider it an Online Appointment
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Picture */}
+            <div>
+              <Label className="mb-2 block">Picture</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-48">
+                <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                <Button variant="outline" size="sm" className="mb-2">
+                  Upload
+                </Button>
+                <Button variant="ghost" size="sm" className="text-red-600">
+                  <X className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Booking and Assignment Section */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
+          <div className="space-y-6">
+            {/* Book By */}
+            <div>
+              <Label className="mb-3 block">Book By</Label>
+              <RadioGroup
+                value={formData.bookBy}
+                onValueChange={(value) => setFormData({ ...formData, bookBy: value })}
+                className="flex gap-6"
+              >
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="user" id="book-user" />
+                  <Label htmlFor="book-user">User</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="resources" id="book-resources" />
+                  <Label htmlFor="book-resources">Resources</Label>
+                </div>
+              </RadioGroup>
+
+              {/* User Selection */}
+              {formData.bookBy === 'user' && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {['A1 User 1', 'A2 User 2'].map((user) => (
+                    <Button
+                      key={user}
+                      variant={selectedUsers.includes(user) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => toggleUser(user)}
+                    >
+                      {user}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Assignment */}
+            <div>
+              <Label className="mb-3 block">Assignment</Label>
+              <RadioGroup
+                value={formData.assignment}
+                onValueChange={(value) => setFormData({ ...formData, assignment: value })}
+                className="flex gap-6"
+              >
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="automatically" id="assign-auto" />
+                  <Label htmlFor="assign-auto">Automatically</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="by-visitor" id="assign-visitor" />
+                  <Label htmlFor="assign-visitor">By visitor</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Manage Capacity */}
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="manage-capacity"
+                checked={formData.manageCapacity}
+                onChange={(e) => setFormData({ ...formData, manageCapacity: e.target.checked })}
+              />
+              <div className="flex-1">
+                <Label htmlFor="manage-capacity" className="cursor-pointer">
+                  Manage capacity
+                </Label>
+                {formData.manageCapacity && (
+                  <div className="mt-2">
+                    <Input
+                      type="number"
+                      value={formData.capacity}
+                      onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 1 })}
+                      className="w-20 inline-block mr-2"
+                      min="1"
+                    />
+                    <span className="text-sm text-gray-600">
+                      Simultaneous Appointment(s) per user
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabbed Interface */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="border-b border-gray-200 px-6">
+              <TabsList className="bg-transparent h-auto p-0">
+                <TabsTrigger value="schedule" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                  Schedule
+                </TabsTrigger>
+                <TabsTrigger value="question" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                  Question
+                </TabsTrigger>
+                <TabsTrigger value="options" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                  options
+                </TabsTrigger>
+                <TabsTrigger value="misc" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                  Misc
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="p-6">
+              <TabsContent value="schedule" className="mt-0">
+                <div className="space-y-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">Every</TableHead>
+                        <TableHead>From</TableHead>
+                        <TableHead>To</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {schedule.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <select
+                              value={item.day}
+                              onChange={(e) => handleUpdateSchedule(item.id, 'day', e.target.value)}
+                              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+                            >
+                              {daysOfWeek.map((day) => (
+                                <option key={day} value={day}>{day}</option>
+                              ))}
+                            </select>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="time"
+                                value={item.from}
+                                onChange={(e) => handleUpdateSchedule(item.id, 'from', e.target.value)}
+                                className="w-32"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="time"
+                                value={item.to}
+                                onChange={(e) => handleUpdateSchedule(item.id, 'to', e.target.value)}
+                                className="w-32"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteSchedule(item.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <Button
+                    variant="ghost"
+                    onClick={handleAddScheduleLine}
+                    className="text-teal-600 hover:text-teal-700"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add a Line
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="question" className="mt-0">
+                <div className="space-y-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">Question</TableHead>
+                        <TableHead className="w-[200px]">Answer type</TableHead>
+                        <TableHead>Answer</TableHead>
+                        <TableHead className="w-[120px]">mandatory</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {questions.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <Input
+                              value={item.question}
+                              onChange={(e) => handleUpdateQuestion(item.id, 'question', e.target.value)}
+                              placeholder="Enter question"
+                              className="w-full"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <select
+                              value={item.answerType}
+                              onChange={(e) => handleUpdateQuestion(item.id, 'answerType', e.target.value)}
+                              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+                            >
+                              {answerTypes.map((type) => (
+                                <option key={type} value={type}>{type}</option>
+                              ))}
+                            </select>
+                          </TableCell>
+                          <TableCell>
+                            {renderAnswerInput(item)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Checkbox
+                                checked={item.mandatory}
+                                onChange={(e) => handleUpdateQuestion(item.id, 'mandatory', e.target.checked)}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteQuestion(item.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Add Question Row */}
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <Button
+                            variant="ghost"
+                            onClick={handleAddQuestionClick}
+                            className="text-teal-600 hover:text-teal-700 w-full justify-start"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add a question
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Add Question Dialog */}
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogContent className="sm:max-w-[600px] bg-white relative">
+                    <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+                      <X className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                      <span className="sr-only">Close</span>
+                    </DialogClose>
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-bold text-gray-900 mb-2 pr-8">
+                        Add a question
+                      </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6 py-2">
+                      {/* Answer Type Buttons */}
+                      <div>
+                        <Label className="mb-3 block text-sm font-semibold text-gray-700">
+                          Answer Type
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {answerTypeOptions.map((type) => (
+                            <Button
+                              key={type}
+                              type="button"
+                              variant={newQuestion.answerType === type ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setNewQuestion({ ...newQuestion, answerType: type })}
+                              className={
+                                newQuestion.answerType === type
+                                  ? 'bg-teal-600 text-white hover:bg-teal-700 border-teal-600 shadow-md'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                              }
+                            >
+                              {type}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Question Input */}
+                      <div className="space-y-2">
+                        <Label htmlFor="dialog-question" className="text-sm font-semibold text-gray-700">
+                          Question
+                        </Label>
+                        <Input
+                          id="dialog-question"
+                          value={newQuestion.question}
+                          onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
+                          placeholder="Anything else we should know?"
+                          className="w-full border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                        />
+                      </div>
+
+                      {/* Mandatory Checkbox */}
+                      <div className="flex items-center gap-3 pt-2">
+                        <Checkbox
+                          id="dialog-mandatory"
+                          checked={newQuestion.mandatory}
+                          onChange={(e) => setNewQuestion({ ...newQuestion, mandatory: e.target.checked })}
+                          className="h-4 w-4 border-gray-300"
+                        />
+                        <Label htmlFor="dialog-mandatory" className="cursor-pointer text-sm font-medium text-gray-700">
+                          Mandatory Answer
+                        </Label>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="mt-6 pt-4 border-t border-gray-200">
+                      <Button
+                        variant="outline"
+                        onClick={() => setDialogOpen(false)}
+                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handleSaveQuestion}
+                        className="bg-teal-600 text-white hover:bg-teal-700"
+                      >
+                        Add Question
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </TabsContent>
+
+              <TabsContent value="options" className="mt-0">
+                <div className="text-center py-8 text-gray-500">
+                  Options tab content - Coming soon
+                </div>
+              </TabsContent>
+
+              <TabsContent value="misc" className="mt-0">
+                <div className="text-center py-8 text-gray-500">
+                  Misc tab content - Coming soon
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default AppointmentForm;
+

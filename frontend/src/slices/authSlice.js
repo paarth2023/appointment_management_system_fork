@@ -125,6 +125,11 @@ const authSlice = createSlice({
                 state.tokens = action.payload;
                 state.isAuthenticated = true;
                 state.loading = false;
+                
+                // Store user data from login response if available
+                if (action.payload.user) {
+                    state.user = action.payload.user;
+                }
 
                 // Persist in storage based on rememberMe
                 if (action.payload.rememberMe) {

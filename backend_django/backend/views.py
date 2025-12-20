@@ -49,11 +49,11 @@ class ServiceViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        if (
-            self.request.user.is_authenticated
-            and self.request.user.role == "organiser"
-        ):
-            return Service.objects.filter(organiser=self.request.user)
+        if self.request.user.is_authenticated:
+            if self.request.user.role == "admin":
+                return Service.objects.all()
+            elif self.request.user.role == "organiser":
+                return Service.objects.filter(organiser=self.request.user)
         return Service.objects.filter(is_published=True)
 
     def perform_create(self, serializer):

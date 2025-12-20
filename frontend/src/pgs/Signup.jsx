@@ -58,8 +58,8 @@ const Signup = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/profile');
-  }, [isAuthenticated]);
+    if (isAuthenticated) navigate('/dashboard');
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-20 w-full">
