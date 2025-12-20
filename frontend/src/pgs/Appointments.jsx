@@ -134,7 +134,7 @@ const Dashboard = () => {
   };
 
   const handleEdit = (service) => {
-    navigate(`/dashboard/${service.id}/edit`);
+    navigate(`/admindashboard/${service.id}/edit`);
   };
 
   const handleDeleteClick = (service) => {
@@ -234,7 +234,7 @@ const Dashboard = () => {
               Settings
             </Button>
             <Button
-              onClick={() => navigate('/dashboard/new')}
+              onClick={() => navigate('/admindashboard/new')}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />

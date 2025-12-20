@@ -24,7 +24,7 @@ import { signup, verifyOtp } from '../slices/authSlice';
 const Signup = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
+  const { isAuthenticated, loading, error, user } = useSelector((state) => state.auth);
   
   const [step, setStep] = useState(1); // 1 = signup form, 2 = OTP verification
   const [signupData, setSignupData] = useState(null);
@@ -83,8 +83,15 @@ const Signup = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/');
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated && user) {
+      // Redirect based on user role
+      if (user.role === 'customer') {
+        navigate('/customerhome');
+      } else {
+        navigate('/admindashboard');
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-20 w-full">

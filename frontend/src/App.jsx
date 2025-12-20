@@ -17,6 +17,9 @@ const Resources = lazy(() => import("./pgs/Resources"));
 const Users = lazy(() => import("./pgs/Users"));
 const Meetings = lazy(() => import("./pgs/Meetings"));
 const Reporting = lazy(() => import("./pgs/Reporting"));
+const CustomerHome = lazy(() => import("./pgs/CustomerHome"));
+const CustomerAppointment = lazy(() => import("./pgs/CustomerAppointment"));
+const CustomerBooking = lazy(() => import("./pgs/CustomerBooking"));
 const AIChatAssistant = lazy(() => import("./components/AIChatAssistant"));
 
 
@@ -25,13 +28,28 @@ function PrivateRoute({ children }) {
   return isAuthenticated ? children : <Login />;
 }
 
+function AdminRoute({ children }) {
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+  
+  // Redirect customers to customer home
+  if (user && user.role === 'customer') {
+    window.location.href = '/customer/home';
+    return null;
+  }
+  
+  return children;
+}
+
 const App = () => {
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const dispatch = useDispatch();
   const location = useLocation();
   const { tokens } = useSelector(state => state.auth);
-  const hideNavBar = location.pathname.includes('/dashboard/') && location.pathname !== '/dashboard';
-  
+  const hideNavBar = (location.pathname.includes('/dashboard/') && location.pathname !== '/dashboard') || location.pathname.startsWith('/customer');
 
   useEffect(() => {
     let interval;
@@ -62,59 +80,83 @@ const App = () => {
                 }
               />
               <Route
-                path="/dashboard"
+                path="/customerhome"
                 element={
                   <PrivateRoute>
+                    <CustomerHome />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/customer/appointment/:id"
+                element={
+                  <PrivateRoute>
+                    <CustomerAppointment />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/customer/appointment/:id/book"
+                element={
+                  <PrivateRoute>
+                    <CustomerBooking />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/admindashboard"
+                element={
+                  <AdminRoute>
                     <Dashboard />
-                  </PrivateRoute>
+                  </AdminRoute>
                 }
               />
               <Route
-                path="/dashboard/:id/edit"
+                path="/admindashboard/:id/edit"
                 element={
-                  <PrivateRoute>
+                  <AdminRoute>
                     <AppointmentForm />
-                  </PrivateRoute>
+                  </AdminRoute>
                 }
               />
               <Route
-                path="/dashboard/new"
+                path="/admindashboard/new"
                 element={
-                  <PrivateRoute>
+                  <AdminRoute>
                     <AppointmentForm />
-                  </PrivateRoute>
+                  </AdminRoute>
                 }
               />
               <Route
                 path="/settings/resources"
                 element={
-                  <PrivateRoute>
+                  <AdminRoute>
                     <Resources />
-                  </PrivateRoute>
+                  </AdminRoute>
                 }
               />
               <Route
                 path="/settings/users"
                 element={
-                  <PrivateRoute>
+                  <AdminRoute>
                     <Users />
-                  </PrivateRoute>
+                  </AdminRoute>
                 }
               />
               <Route
                 path="/meetings"
                 element={
-                  <PrivateRoute>
+                  <AdminRoute>
                     <Meetings />
-                  </PrivateRoute>
+                  </AdminRoute>
                 }
               />
               <Route
                 path="/reporting"
                 element={
-                  <PrivateRoute>
+                  <AdminRoute>
                     <Reporting />
-                  </PrivateRoute>
+                  </AdminRoute>
                 }
               />
               <Route path="*" element={<Home />} />

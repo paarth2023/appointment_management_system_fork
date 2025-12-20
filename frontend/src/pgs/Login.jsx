@@ -44,10 +44,15 @@ const Login = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    if (isAuthenticated && user) {
+      // Redirect based on user role
+      if (user.role === 'customer') {
+        navigate('/customerhome');
+      } else {
+        navigate('/admindashboard');
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-20 w-full">

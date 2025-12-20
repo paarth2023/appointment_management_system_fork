@@ -224,14 +224,14 @@ const Resources = () => {
             {/* Action Buttons */}
             <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
               <Button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/admindashboard')}
                 className="bg-teal-600 text-white hover:bg-teal-700"
               >
                 Save
               </Button>
               <Button
                 variant="outline"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/admindashboard')}
               >
                 Cancel
               </Button>

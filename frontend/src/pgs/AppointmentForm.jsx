@@ -398,7 +398,7 @@ const AppointmentForm = () => {
         <div className="mb-6 flex items-center justify-end gap-3">
           <Button
             variant="outline"
-            onClick={() => navigate('/dashboard/new')}
+            onClick={() => navigate('/admindashboard/new')}
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
