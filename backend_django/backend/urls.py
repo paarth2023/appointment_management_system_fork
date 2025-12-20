@@ -20,6 +20,7 @@ from .views import (
     AdminUserListView,
     AdminBookingListView,
     AdminServiceSlotsView,
+    AdminBookingDeleteView,
 )
 
 router = DefaultRouter()
@@ -37,7 +38,7 @@ urlpatterns = [
     path("auth/password/change/", ChangePasswordView.as_view()),
     path("profile/", ProfileView.as_view()),
     path(
-        "availability/<uuid:service_id>/<str:date_str>/",
+        "availability/<int:service_id>/<str:date_str>/",
         AvailabilityView.as_view(),
     ),
     path("dashboard/stats/", DashboardStatsView.as_view()),
@@ -46,5 +47,6 @@ urlpatterns = [
     path("admin/users/", AdminUserListView.as_view()),
     path("admin/bookings/", AdminBookingListView.as_view()),
     path("admin/services/<int:service_id>/slots/", AdminServiceSlotsView.as_view()),
+    path("admin/bookings/<uuid:booking_id>/", AdminBookingDeleteView.as_view()),
     path("", include(router.urls)),
 ]
