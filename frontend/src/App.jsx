@@ -21,6 +21,7 @@ const CustomerHome = lazy(() => import("./pgs/CustomerHome"));
 const CustomerAppointment = lazy(() => import("./pgs/CustomerAppointment"));
 const CustomerBooking = lazy(() => import("./pgs/CustomerBooking"));
 const BookingDetails = lazy(() => import("./pgs/BookingDetails"));
+const CustomerProfile = lazy(() => import("./pgs/CustomerProfile"));
 const AIChatAssistant = lazy(() => import("./components/AIChatAssistant"));
 
 
@@ -50,7 +51,7 @@ const App = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   const { tokens } = useSelector(state => state.auth);
-  const hideNavBar = (location.pathname.includes('/dashboard/') && location.pathname !== '/dashboard') || location.pathname.startsWith('/customer');
+  const hideNavBar = location.pathname.includes('/admindashboard/') && location.pathname !== '/admindashboard';
 
   useEffect(() => {
     let interval;
@@ -109,6 +110,14 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <BookingDetails />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/customerprofile"
+                element={
+                  <PrivateRoute>
+                    <CustomerProfile />
                   </PrivateRoute>
                 }
               />

@@ -11,11 +11,20 @@ const NavBar = () => {
   const location = useLocation();
   const dispatch = useDispatch();
 
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
+  };
+
+  const handleDashboardClick = (e) => {
+    e.preventDefault();
+    if (user?.role === 'customer') {
+      navigate('/customerhome');
+    } else {
+      navigate('/admindashboard');
+    }
   };
 
   const navLinks = [
@@ -23,7 +32,6 @@ const NavBar = () => {
     { to: '/about', label: 'About', always: true },
     { to: '/login', label: 'Login', auth: false },
     { to: '/signup', label: 'Signup', auth: false },
-    { to: '/admindashboard', label: 'Dashboard', auth: true },
   ];
 
   const filteredLinks = navLinks.filter(link =>
@@ -43,26 +51,41 @@ const NavBar = () => {
         </Link>
       ))}
       {isAuthenticated && (
-        <Menu shadow="md" width={200}>
-          <Menu.Target>
-            <Avatar
-              className="cursor-pointer hover:ring-2 hover:ring-teal-500 transition-all"
-              color="teal"
-              radius="xl"
+        <>
+          <Button
+            color={(location.pathname === '/admindashboard' || location.pathname === '/customerhome') ? 'teal' : 'gray'}
+            variant={(location.pathname === '/admindashboard' || location.pathname === '/customerhome') ? 'filled' : 'subtle'}
+            onClick={handleDashboardClick}
+          >
+            Dashboard
+          </Button>
+          <Link to={user?.role === 'customer' ? '/customerprofile' : '/profile'}>
+            <Button
+              color={(location.pathname === '/profile' || location.pathname === '/customerprofile') ? 'teal' : 'gray'}
+              variant={(location.pathname === '/profile' || location.pathname === '/customerprofile') ? 'filled' : 'subtle'}
             >
-              <IconUser size={20} />
-            </Avatar>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item icon={<IconUser size={16} />} component={Link} to="/profile">
-              My Profile
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item icon={<IconLogout size={16} />} color="red" onClick={handleLogout}>
-              Logout
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
+              Profile
+            </Button>
+          </Link>
+          <Menu shadow="md" width={200}>
+            <Menu.Target>
+              <Avatar
+                className="cursor-pointer hover:ring-2 hover:ring-teal-500 transition-all"
+                color="teal"
+                radius="xl"
+              >
+                {user?.full_name?.charAt(0) || 'U'}
+              </Avatar>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>{user?.full_name || 'User'}</Menu.Label>
+              <Menu.Divider />
+              <Menu.Item icon={<IconLogout size={16} />} color="red" onClick={handleLogout}>
+                Logout
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </>
       )}
     </div>
   );
@@ -82,14 +105,33 @@ const NavBar = () => {
           </Link>
         ))}
         {isAuthenticated && (
-          <Button
-            color="red"
-            variant="subtle"
-            fullWidth
-            onClick={() => { handleLogout(); setOpened(false); }}
-          >
-            Logout
-          </Button>
+          <>
+            <Button
+              color={(location.pathname === '/admindashboard' || location.pathname === '/customerhome') ? 'teal' : 'gray'}
+              variant={(location.pathname === '/admindashboard' || location.pathname === '/customerhome') ? 'filled' : 'subtle'}
+              fullWidth
+              onClick={(e) => { handleDashboardClick(e); setOpened(false); }}
+            >
+              Dashboard
+            </Button>
+            <Link to={user?.role === 'customer' ? '/customerprofile' : '/profile'} onClick={() => setOpened(false)}>
+              <Button
+                color={(location.pathname === '/profile' || location.pathname === '/customerprofile') ? 'teal' : 'gray'}
+                variant={(location.pathname === '/profile' || location.pathname === '/customerprofile') ? 'filled' : 'subtle'}
+                fullWidth
+              >
+                Profile
+              </Button>
+            </Link>
+            <Button
+              color="red"
+              variant="subtle"
+              fullWidth
+              onClick={() => { handleLogout(); setOpened(false); }}
+            >
+              Logout
+            </Button>
+          </>
         )}
       </div>
     </ScrollArea>

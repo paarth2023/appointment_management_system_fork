@@ -28,62 +28,42 @@ import {
   IconBell, 
   IconShieldCheck 
 } from '@tabler/icons-react';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchProfile as fetchUserProfile } from '../slices/authSlice';
 import NavBar from '../components/NavBar';
 
 const Profile = () => {
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { user, tokens, loading: authLoading } = useSelector((state) => state.auth);
+  
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editMode, setEditMode] = useState(false);
-  
-  const [profileData, setProfileData] = useState({
-    email: '',
-    full_name: '',
-    phone_no: '',
-    notification_preference: 'both',
-    role: ''
-  });
 
   const [formData, setFormData] = useState({
-    full_name: '',
-    phone_no: '',
-    notification_preference: 'both'
+    full_name: user?.full_name || '',
+    phone_no: user?.phone_no || '',
+    notification_preference: user?.notification_preference || 'both'
   });
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
-    try {
-      const authTokens = localStorage.getItem('authTokens') || sessionStorage.getItem('authTokens');
-      if (!authTokens) {
-        throw new Error('No authentication token found');
-      }
-      
-      const tokens = JSON.parse(authTokens);
-      const response = await fetch('http://localhost:8000/api/profile/', {
-        headers: {
-          'Authorization': `Bearer ${tokens.access}`
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch profile');
-      
-      const data = await response.json();
-      setProfileData(data);
-      setFormData({
-        full_name: data.full_name || '',
-        phone_no: data.phone_no || '',
-        notification_preference: data.notification_preference || 'both'
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    // Fetch profile data on mount if we have tokens
+    if (tokens?.access && !user) {
+      dispatch(fetchUserProfile(tokens.access));
     }
-  };
+  }, [dispatch, tokens, user]);
+
+  useEffect(() => {
+    // Update form data when user data changes
+    if (user) {
+      setFormData({
+        full_name: user.full_name || '',
+        phone_no: user.phone_no || '',
+        notification_preference: user.notification_preference || 'both'
+      });
+    }
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -92,12 +72,10 @@ const Profile = () => {
     setSuccess('');
 
     try {
-      const authTokens = localStorage.getItem('authTokens') || sessionStorage.getItem('authTokens');
-      if (!authTokens) {
+      if (!tokens?.access) {
         throw new Error('No authentication token found');
       }
       
-      const tokens = JSON.parse(authTokens);
       const response = await fetch('http://localhost:8000/api/profile/', {
         method: 'PATCH',
         headers: {
@@ -109,8 +87,9 @@ const Profile = () => {
 
       if (!response.ok) throw new Error('Failed to update profile');
 
-      const updatedData = await response.json();
-      setProfileData(updatedData);
+      await response.json();
+      // Refresh user data from Redux
+      dispatch(fetchUserProfile(tokens.access));
       setEditMode(false);
       setSuccess('Profile updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
@@ -123,9 +102,9 @@ const Profile = () => {
 
   const handleCancel = () => {
     setFormData({
-      full_name: profileData.full_name || '',
-      phone_no: profileData.phone_no || '',
-      notification_preference: profileData.notification_preference || 'both'
+      full_name: user?.full_name || '',
+      phone_no: user?.phone_no || '',
+      notification_preference: user?.notification_preference || 'both'
     });
     setEditMode(false);
     setError('');
@@ -150,7 +129,7 @@ const Profile = () => {
     return colors[role] || 'gray';
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <>
         <NavBar />
@@ -185,10 +164,10 @@ const Profile = () => {
                 <IconUser size={40} />
               </Avatar>
               <div>
-                <Title order={2}>{profileData.full_name || 'User'}</Title>
-                <Text size="sm" color="dimmed">{profileData.email}</Text>
-                <Badge color={getRoleBadgeColor(profileData.role)} mt="xs">
-                  {profileData.role?.toUpperCase() || 'USER'}
+                <Title order={2}>{user?.full_name || 'User'}</Title>
+                <Text size="sm" color="dimmed">{user?.email}</Text>
+                <Badge color={getRoleBadgeColor(user?.role)} mt="xs">
+                  {user?.role?.toUpperCase() || 'USER'}
                 </Badge>
               </div>
             </Group>
@@ -219,7 +198,7 @@ const Profile = () => {
                     <IconMail size={20} color="teal" />
                     <div style={{ flex: 1 }}>
                       <Text size="xs" color="dimmed" transform="uppercase" weight={600}>Email Address</Text>
-                      <Text size="md">{profileData.email || 'Not provided'}</Text>
+                      <Text size="md">{user?.email || 'Not provided'}</Text>
                     </div>
                   </Group>
 
@@ -227,7 +206,7 @@ const Profile = () => {
                     <IconUser size={20} color="teal" />
                     <div style={{ flex: 1 }}>
                       <Text size="xs" color="dimmed" transform="uppercase" weight={600}>Full Name</Text>
-                      <Text size="md">{profileData.full_name || 'Not provided'}</Text>
+                      <Text size="md">{user?.full_name || 'Not provided'}</Text>
                     </div>
                   </Group>
 
@@ -235,7 +214,7 @@ const Profile = () => {
                     <IconPhone size={20} color="teal" />
                     <div style={{ flex: 1 }}>
                       <Text size="xs" color="dimmed" transform="uppercase" weight={600}>Phone Number</Text>
-                      <Text size="md">{profileData.phone_no || 'Not provided'}</Text>
+                      <Text size="md">{user?.phone_no || 'Not provided'}</Text>
                     </div>
                   </Group>
 
@@ -244,7 +223,7 @@ const Profile = () => {
                     <div style={{ flex: 1 }}>
                       <Text size="xs" color="dimmed" transform="uppercase" weight={600}>Notification Preference</Text>
                       <Badge color="blue" size="lg" mt={4}>
-                        {getNotificationLabel(profileData.notification_preference)}
+                        {getNotificationLabel(user?.notification_preference)}
                       </Badge>
                     </div>
                   </Group>
@@ -253,7 +232,7 @@ const Profile = () => {
                     <IconShieldCheck size={20} color="teal" />
                     <div style={{ flex: 1 }}>
                       <Text size="xs" color="dimmed" transform="uppercase" weight={600}>Account Role</Text>
-                      <Text size="md">{profileData.role?.charAt(0).toUpperCase() + profileData.role?.slice(1) || 'User'}</Text>
+                      <Text size="md">{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1) || 'User'}</Text>
                     </div>
                   </Group>
                 </Stack>
@@ -282,7 +261,7 @@ const Profile = () => {
                 <TextInput
                   label="Email Address"
                   icon={<IconMail size={16} />}
-                  value={profileData.email}
+                  value={user?.email}
                   disabled
                   description="Email cannot be changed"
                 />
@@ -322,7 +301,7 @@ const Profile = () => {
                 <TextInput
                   label="Account Role"
                   icon={<IconShieldCheck size={16} />}
-                  value={profileData.role}
+                  value={user?.role}
                   disabled
                   description="Role cannot be changed"
                 />

@@ -105,52 +105,6 @@ const CustomerBooking = () => {
 
   return (
     <div className="w-full min-h-screen bg-gray-50">
-      {/* Customer Navigation Bar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <img src="/logo-white.png" alt="Logo" className="h-8 w-8" />
-              <span className="text-xl font-bold text-teal-600">NeoDermaScan</span>
-            </div>
-            <nav className="flex items-center gap-6">
-              <button
-                onClick={() => navigate('/customer/home')}
-                className="text-gray-700 hover:text-teal-600 transition-colors"
-              >
-                Home
-              </button>
-              <button
-                onClick={() => navigate('/about')}
-                className="text-gray-700 hover:text-teal-600 transition-colors"
-              >
-                About
-              </button>
-              <span className="text-sm text-gray-700">Welcome, {user?.full_name || 'Customer 1'}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/customer/profile')}
-              >
-                My Profile
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  localStorage.removeItem('authTokens');
-                  sessionStorage.removeItem('authTokens');
-                  window.location.href = '/login';
-                }}
-                className="text-red-600 hover:text-red-700"
-              >
-                Logout
-              </Button>
-            </nav>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
