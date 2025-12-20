@@ -22,6 +22,7 @@ from .views import (
     AdminServiceSlotsView,
     AdminBookingDeleteView,
 )
+from .agent.views import AgentExecuteView
 
 router = DefaultRouter()
 router.register(r"services", ServiceViewSet, basename="service")
@@ -44,6 +45,7 @@ urlpatterns = [
     path("dashboard/stats/", DashboardStatsView.as_view()),
     path("payments/create-order/", CreatePaymentOrderView.as_view()),
     path("payments/verify/", VerifyPaymentView.as_view()),
+    path("agent/execute/", AgentExecuteView.as_view()),
     path("admin/users/", AdminUserListView.as_view()),
     path("admin/bookings/", AdminBookingListView.as_view()),
     path("admin/services/<int:service_id>/slots/", AdminServiceSlotsView.as_view()),

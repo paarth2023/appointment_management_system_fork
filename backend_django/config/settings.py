@@ -223,3 +223,6 @@ USE_ASYNC_TASKS = env.bool("USE_ASYNC_TASKS", default=True)
 if not USE_ASYNC_TASKS:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
+
+# Agent Configuration
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")

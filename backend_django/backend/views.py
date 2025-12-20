@@ -429,7 +429,7 @@ class BookingViewSet(viewsets.ModelViewSet):
 
 
 class AvailabilityView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get(self, request, service_id, date_str):
         try:
