@@ -5,7 +5,7 @@ from django.core.cache import cache
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import get_user_model
 from django_ratelimit.decorators import ratelimit
-from django.core.cache import cache
+from django.db import transaction
 from rest_framework import generics, permissions, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.views import APIView
@@ -30,6 +30,8 @@ from .serializers import (
     PasswordResetConfirmSerializer,
 )
 from .utils import send_otp, get_razorpay_client
+from .async_tasks.tasks import booking_created_task, booking_cancelled_task
+from .async_tasks.utils import run_task
 
 User = get_user_model()
 
@@ -254,12 +256,17 @@ class VerifyPaymentView(APIView):
 
         payment.razorpay_payment_id = payment_id
         payment.razorpay_signature = signature
+
         payment.status = "paid"
         payment.save()
 
         booking = payment.booking
         booking.status = "confirmed"
         booking.save(update_fields=["status"])
+
+        transaction.on_commit(
+            lambda: run_task(booking_created_task, str(booking.id))
+        )
 
         return Response({"message": "Payment verified"})
 

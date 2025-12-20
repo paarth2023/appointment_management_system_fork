@@ -148,7 +148,7 @@ class Command(BaseCommand):
                 slot=slot,
                 service=service,
                 resource=doctor,
-                status="confirmed",
+                status="pending",
                 answers={
                     "problem": "General checkup",
                     "age": 25 + i,
@@ -157,15 +157,6 @@ class Command(BaseCommand):
 
             slot.booked_count += 1
             slot.save(update_fields=["booked_count"])
-
-            Payment.objects.create(
-                booking=booking,
-                amount=service.price,
-                currency="INR",
-                status="paid",
-                provider="razorpay",
-                razorpay_payment_id=f"rzp_demo_{i}",
-            )
 
             Notification.objects.create(
                 user=customer,

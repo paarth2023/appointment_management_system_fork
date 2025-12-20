@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "phonenumber_field",
     "backend",
+    "django_celery_results",
 ]
 
 AUTH_USER_MODEL = "backend.User"
@@ -100,7 +101,7 @@ MIDDLEWARE = [
 
 # CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
 CORS_ALLOWED_ORIGINS = env.list(
-    "CORS_ALLOWED_ORIGINS", default=["http://localhost:5173"]
+    "CORS_ALLOWED_ORIGINS", default=["*"]
 )
 
 ROOT_URLCONF = "config.urls"
@@ -207,3 +208,18 @@ TWILIO_PHONE_NUMBER = env("TWILIO_PHONE_NUMBER", default="")
 # Razorpay Configuration
 RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET", default="")
+
+# Celery Configuration
+CELERY_BROKER_URL = "amqp://guest:guest@rabbitmq:5672//"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_BACKEND = "django-db"
+
+CELERY_TASK_ROUTES = {
+    "backend.async_tasks.tasks.*": {"queue": "notifications"},
+}
+
+USE_ASYNC_TASKS = env.bool("USE_ASYNC_TASKS", default=True)
+if not USE_ASYNC_TASKS:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True

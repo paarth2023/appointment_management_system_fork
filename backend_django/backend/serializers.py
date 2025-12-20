@@ -5,6 +5,8 @@ from django.core.cache import cache
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import Service, Resource, WorkingHours, Slot, Booking, Notification, OTP
+from .async_tasks.tasks import booking_created_task, booking_cancelled_task
+from .async_tasks.utils import run_task
 
 User = get_user_model()
 
@@ -207,9 +209,8 @@ class BookingSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             slot = Slot.objects.select_for_update().get(id=slot.id)
             if slot.booked_count + quantity > slot.capacity:
-                raise serializers.ValidationError(
-                    {"capacity": "Slot capacity exceeded"}
-                )
+                raise serializers.ValidationError("Slot capacity exceeded")
+
             booking = Booking.objects.create(
                 customer=request.user,
                 slot=slot,
@@ -220,12 +221,16 @@ class BookingSerializer(serializers.ModelSerializer):
             )
             slot.booked_count += quantity
             slot.save(update_fields=["booked_count"])
+        
+        service = booking.service
+        if not service.manual_confirmation and not service.advance_payment_required:
+            booking.status = "confirmed"
+            booking.save(update_fields=["status"])
 
-            service = booking.service
+            transaction.on_commit(
+                lambda: run_task(booking_created_task, str(booking.id))
+            )
 
-            if not service.manual_confirmation and not service.advance_payment_required:
-                booking.status = "confirmed"
-                booking.save(update_fields=["status"])
         return booking
 
     def cancel_booking(self, booking: Booking, user):
@@ -233,15 +238,21 @@ class BookingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Not allowed")
         if booking.status == "cancelled":
             raise serializers.ValidationError("Booking already cancelled")
-        if booking.status == "completed":
+        elif booking.status == "completed":
             raise serializers.ValidationError("Completed booking, cannot be cancelled")
+
         with transaction.atomic():
             slot = Slot.objects.select_for_update().get(id=booking.slot_id)
             slot.booked_count = max(0, slot.booked_count - booking.quantity)
             slot.save(update_fields=["booked_count"])
             booking.status = "cancelled"
             booking.save(update_fields=["status"])
-            return booking
+
+        transaction.on_commit(
+            lambda: run_task(booking_cancelled_task, str(booking.id))
+        )
+
+        return booking
 
 
 class NotificationSerializer(serializers.ModelSerializer):
