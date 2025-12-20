@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import Service, Resource, Schedule, Booking, Notification
+from .models import Service, Resource, WorkingHours, Slot, Booking, Notification
 
 User = get_user_model()
 
@@ -21,31 +21,26 @@ class RegisterSerializer(serializers.ModelSerializer):
             "password",
             "confirm_password",
             "role",
-            "notification_preference"
+            "notification_preference",
         )
 
     def validate(self, attrs):
         if attrs["password"] != attrs["confirm_password"]:
-            raise serializers.ValidationError({"password": "Passwords do not match"})
+            raise serializers.ValidationError("Passwords do not match")
         return attrs
 
     def create(self, validated_data):
         validated_data.pop("confirm_password")
-        return User.objects.create_user(
-            email=validated_data["email"],
-            password=validated_data["password"],
-            full_name=validated_data["full_name"],
-            phone_no=validated_data.get("phone_no"),
-            role=validated_data.get("role", "customer"),
-            notification_preference=validated_data.get("notification_preference", "email")
-        )
+        return User.objects.create_user(**validated_data)
 
 
 class LoginSerializer(TokenObtainPairSerializer):
-    """JWT login response with user info"""
-
     def validate(self, attrs):
         data = super().validate(attrs)
+
+        if not self.user.is_verified:
+            raise serializers.ValidationError("User not verified via OTP")
+
         data["user"] = {
             "id": str(self.user.id),
             "email": self.user.email,
@@ -58,8 +53,17 @@ class LoginSerializer(TokenObtainPairSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "full_name", "phone_no", "role", "avatar", "notification_preference"]
-        read_only_fields = ["id", "email"]
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "phone_no",
+            "role",
+            "notification_preference",
+            "notification_consent",
+            "is_verified",
+        ]
+        read_only_fields = ["id", "email", "is_verified"]
 
 
 class ResourceSerializer(serializers.ModelSerializer):
@@ -69,40 +73,60 @@ class ResourceSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-class ScheduleSerializer(serializers.ModelSerializer):
+class WorkingHoursSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Schedule
+        model = WorkingHours
         fields = "__all__"
         read_only_fields = ["id"]
 
 
+class SlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Slot
+        fields = "__all__"
+        read_only_fields = ["id", "booked_count"]
+
+
 class ServiceSerializer(serializers.ModelSerializer):
     resources = ResourceSerializer(many=True, read_only=True)
-    schedules = ScheduleSerializer(many=True, read_only=True)
     organiser_name = serializers.CharField(source="organiser.full_name", read_only=True)
 
     class Meta:
         model = Service
         fields = "__all__"
-        read_only_fields = ["id", "created_at", "updated_at", "organiser"]
+        read_only_fields = ["id", "created_at", "organiser"]
 
     def create(self, validated_data):
-        validated_data['organiser'] = self.context['request'].user
+        validated_data["organiser"] = self.context["request"].user
         return super().create(validated_data)
 
 
 class BookingSerializer(serializers.ModelSerializer):
     service_name = serializers.CharField(source="service.name", read_only=True)
     customer_name = serializers.CharField(source="customer.full_name", read_only=True)
-    resource_name = serializers.CharField(source="resource.name", read_only=True, allow_null=True)
 
     class Meta:
         model = Booking
         fields = "__all__"
-        read_only_fields = ["id", "customer", "created_at", "updated_at", "status"]
+        read_only_fields = [
+            "id",
+            "customer",
+            "created_at",
+            "status",
+            "service",
+            "resource",
+        ]
 
     def create(self, validated_data):
-        validated_data['customer'] = self.context['request'].user
+        validated_data["customer"] = self.context["request"].user
+        
+        # Auto-assign service and resource from the slot
+        slot = validated_data.get("slot")
+        if slot:
+            validated_data["service"] = slot.service
+            if slot.resource:
+                validated_data["resource"] = slot.resource
+        
         return super().create(validated_data)
 
 
@@ -110,4 +134,4 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = "__all__"
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "is_sent"]

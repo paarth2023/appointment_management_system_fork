@@ -133,48 +133,28 @@ def send_twilio_message(phone, message, whatsapp=False):
         return False
 
 
-def send_notification(
-    user, subject, message, notification_type="appointment_confirmation"
-):
-    """
-    Unified notification sender that respects user preferences
-    Creates Notification record and sends via preferred channel
-    """
+def send_notification(user, title, message):
     from .models import Notification
 
-    # Check if user has given consent
     if not user.notification_consent:
-        # print(f"User {user.email} has not given notification consent")
         return False
 
-    # Determine channel
     channel = user.notification_preference
     success = False
-    error_message = None
 
-    # Send notification based on preference
-    try:
-        if channel == "email":
-            success = send_email_notification(subject, message, user.email)
-        elif channel == "sms":
-            success = send_twilio_message(user.phone_no, message)
-        elif channel == "whatsapp":
-            success = send_twilio_message(user.phone_no, message, whatsapp=True)
-        else:
-            error_message = f"Unknown channel: {channel}"
-    except Exception as e:
-        error_message = str(e)
+    if channel == "email":
+        success = send_email_notification(title, message, user.email)
+    elif channel == "sms" and user.phone_no:
+        success = send_twilio_message(user.phone_no, message)
+    elif channel == "whatsapp" and user.phone_no:
+        success = send_twilio_message(user.phone_no, message, whatsapp=True)
 
-    # Create notification record
-    notification = Notification.objects.create(
+    Notification.objects.create(
         user=user,
-        notification_type=notification_type,
         channel=channel,
-        subject=subject,
+        title=title,
         message=message,
-        status="sent" if success else "failed",
-        sent_at=timezone.now() if success else None,
-        error_message=error_message,
+        is_sent=success,
     )
 
     return success

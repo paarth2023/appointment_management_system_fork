@@ -1,166 +1,245 @@
 import uuid
-from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
-from django.utils.translation import gettext_lazy as _
-from phonenumber_field.modelfields import PhoneNumberField
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from django.utils import timezone
+from django.core.exceptions import ValidationError
 
-class CustomUserManager(BaseUserManager):
+
+class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError("The Email field must be set")
+            raise ValueError("Email is required")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
-        user.save(using=self._db)
+        user.save()
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("is_active", True)
         extra_fields.setdefault("role", "admin")
-
+        extra_fields.setdefault("is_verified", True)
         return self.create_user(email, password, **extra_fields)
 
-class User(AbstractUser):
+
+class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
-        ('customer', 'Customer'),
-        ('organiser', 'Organiser'),
-        ('admin', 'Admin'),
+        ("customer", "Customer"),
+        ("organiser", "Organiser"),
+        ("admin", "Admin"),
     ]
-    
-    username = None
-    objects = CustomUserManager()
+
+    NOTIFICATION_PREF_CHOICES = [
+        ("email", "Email"),
+        ("sms", "SMS"),
+        ("whatsapp", "WhatsApp"),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
-    full_name = models.CharField(max_length=255)
+
     email = models.EmailField(unique=True)
-    phone_no = PhoneNumberField(_("phone number"), blank=True, null=True)
-    
-    # Profile fields
-    avatar = models.CharField(max_length=500, blank=True, null=True) # local url
-    
-    # Notification preferences
+    phone_no = models.CharField(max_length=15, blank=True, null=True)
+
+    full_name = models.CharField(max_length=255)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="customer")
+
     notification_preference = models.CharField(
         max_length=20,
-        choices=[("email", "Email"), ("sms", "SMS"), ("whatsapp", "WhatsApp")],
+        choices=NOTIFICATION_PREF_CHOICES,
         default="email",
     )
     notification_consent = models.BooleanField(default=True)
 
+    is_verified = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name"]
+
+    objects = UserManager()
 
     def __str__(self):
         return f"{self.email} ({self.role})"
 
+
+class OTP(models.Model):
+    PURPOSE_CHOICES = [
+        ("signup", "Signup"),
+        ("password_reset", "Password Reset"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    code = models.CharField(max_length=6)
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES)
+
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_valid(self):
+        return not self.is_used and timezone.now() <= self.expires_at
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "purpose"]),
+        ]
+
+
 class Service(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    organiser = models.ForeignKey(User, related_name="services", on_delete=models.CASCADE)
+    organiser = models.ForeignKey(User, on_delete=models.CASCADE, related_name="services")
+
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    duration = models.IntegerField(help_text="Duration in minutes")
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    
-    is_published = models.BooleanField(default=False)
-    requires_manual_confirmation = models.BooleanField(default=False)
-    max_bookings_per_slot = models.IntegerField(default=1)
-    
-    questions = models.JSONField(default=list, blank=True, help_text="List of questions to ask during booking")
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
+    duration_minutes = models.PositiveIntegerField()
+    buffer_minutes = models.PositiveIntegerField(default=0)
+
+    capacity_per_slot = models.PositiveIntegerField(default=1)
+    advance_payment_required = models.BooleanField(default=False)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    manual_confirmation = models.BooleanField(default=False)
+    auto_assign_resource = models.BooleanField(default=True)
+
+    questions_schema = models.JSONField(default=list)
+
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
 class Resource(models.Model):
     TYPE_CHOICES = [
-        ('user', 'User/Staff'),
-        ('asset', 'Asset/Room/Equipment'),
+        ("user", "Staff/User"),
+        ("asset", "Asset/Room"),
     ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    service = models.ForeignKey(Service, related_name="resources", on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
-    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='user')
-    user = models.ForeignKey(User, related_name="assigned_resources", on_delete=models.SET_NULL, null=True, blank=True)
-    
-    def __str__(self):
-        return f"{self.name} ({self.service.name})"
 
-class Schedule(models.Model):
-    """
-    Weekly schedule for a service or specific resource.
-    If resource is null, it applies to the service generally.
-    """
-    DAY_CHOICES = [
-        (0, 'Monday'),
-        (1, 'Tuesday'),
-        (2, 'Wednesday'),
-        (3, 'Thursday'),
-        (4, 'Friday'),
-        (5, 'Saturday'),
-        (6, 'Sunday'),
-    ]
-    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    service = models.ForeignKey(Service, related_name="schedules", on_delete=models.CASCADE)
-    resource = models.ForeignKey(Resource, related_name="schedules", on_delete=models.CASCADE, null=True, blank=True)
-    
-    day_of_week = models.IntegerField(choices=DAY_CHOICES)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="resources")
+
+    name = models.CharField(max_length=255)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+
+    linked_user = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL
+    )
+
+    is_active = models.BooleanField(default=True)
+
+
+class WorkingHours(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    resource = models.ForeignKey(Resource, null=True, blank=True, on_delete=models.CASCADE)
+
+    day_of_week = models.IntegerField(choices=[
+        (0,"Mon"),(1,"Tue"),(2,"Wed"),
+        (3,"Thu"),(4,"Fri"),(5,"Sat"),(6,"Sun")
+    ])
+
     start_time = models.TimeField()
     end_time = models.TimeField()
-    
+
+    def clean(self):
+        if self.resource and self.resource.service_id != self.service_id:
+            raise ValidationError(
+                "WorkingHours.resource must belong to the same service."
+            )
+
+
+class Slot(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    resource = models.ForeignKey(Resource, null=True, blank=True, on_delete=models.CASCADE)
+
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField()
+
+    capacity = models.PositiveIntegerField(default=1)
+    booked_count = models.PositiveIntegerField(default=0)
+
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ['day_of_week', 'start_time']
+        unique_together = ("resource", "start_datetime")
+
 
 class Booking(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending Approval'),
-        ('confirmed', 'Confirmed'),
-        ('cancelled', 'Cancelled'),
-        ('completed', 'Completed'),
+        ("pending", "Pending"),
+        ("confirmed", "Confirmed"),
+        ("cancelled", "Cancelled"),
+        ("completed", "Completed"),
     ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(User, related_name="bookings", on_delete=models.CASCADE)
-    service = models.ForeignKey(Service, related_name="bookings", on_delete=models.CASCADE)
-    resource = models.ForeignKey(Resource, related_name="bookings", on_delete=models.SET_NULL, null=True, blank=True)
-    
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='confirmed')
-    payment_status = models.CharField(max_length=20, default='pending') # if using payments
-    
-    form_answers = models.JSONField(default=dict, blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return f"{self.customer.full_name} - {self.service.name} ({self.start_time})"
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    customer = models.ForeignKey(User, on_delete=models.CASCADE)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    resource = models.ForeignKey(Resource, null=True, blank=True, on_delete=models.SET_NULL)
+    slot = models.ForeignKey(Slot, on_delete=models.PROTECT)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+    )
+    answers = models.JSONField(default=dict)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        if self.service_id != self.slot.service_id:
+            raise ValidationError("Booking.service must match slot.service")
+
+        if self.slot.resource and self.resource_id != self.slot.resource_id:
+            raise ValidationError("Booking.resource must match slot.resource")
+
+        if self.resource and self.resource.service_id != self.service_id:
+            raise ValidationError("Resource does not belong to booking service")
+
+
+class Payment(models.Model):
+    STATUS_CHOICES = [
+        ("initiated", "Initiated"),
+        ("paid", "Paid"),
+        ("failed", "Failed"),
+        ("refunded", "Refunded"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE)
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+
+    provider = models.CharField(max_length=50)
+    provider_ref = models.CharField(max_length=255, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
 class Notification(models.Model):
-    # Simplified notification model
-    STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("sent", "Sent"),
-        ("failed", "Failed"),
+    CHANNEL_CHOICES = [
+        ("email", "Email"),
+        ("sms", "SMS"),
+        ("whatsapp", "WhatsApp"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, related_name="notifications", on_delete=models.CASCADE)
-    type = models.CharField(max_length=50, default="generic") # 'booking_confirmation', etc.
-    channel = models.CharField(max_length=20, default='email')
-    subject = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES)
+    title = models.CharField(max_length=255)
     message = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+
+    is_sent = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        ordering = ["-created_at"]
