@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { TextInput, Group, Text, Paper, ScrollArea, Button, Alert, Table, Card, Badge } from '@mantine/core';
 import { Send, AlertCircle, ExternalLink, CheckCircle, Clock, Calendar } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import api from '@/utils/api';
 
 const BookingAssistant = ({ isVisible }) => {
@@ -220,11 +222,12 @@ const BookingAssistant = ({ isVisible }) => {
         setError(null);
 
         try {
-            const payload = await api.post("/agent/execute/", {
+            const response = await api.post("/agent/execute/", {
                 message: input,
                 context,
             });
 
+            const payload = response.data;
             setContext(payload.context || {});
 
             if (payload.type === "question") {
@@ -232,11 +235,24 @@ const BookingAssistant = ({ isVisible }) => {
                 return;
             }
 
-            const formatted = formatAgentResponse(payload);
-            setMessages((m) => [
-                ...m,
-                { role: "assistant", formatted: formatted, isText: false },
-            ]);
+            // Use formatted_message if available, otherwise fall back to structured data
+            if (payload.formatted_message) {
+                setMessages((m) => [
+                    ...m,
+                    { 
+                        role: "assistant", 
+                        content: payload.formatted_message, 
+                        isFormatted: true,
+                        rawData: payload.data
+                    },
+                ]);
+            } else {
+                const formatted = formatAgentResponse(payload);
+                setMessages((m) => [
+                    ...m,
+                    { role: "assistant", formatted: formatted, isText: false },
+                ]);
+            }
         } catch (err) {
             setError(err.response?.data?.detail || "Agent request failed");
         } finally {
@@ -283,8 +299,8 @@ const BookingAssistant = ({ isVisible }) => {
                     >
                         <Paper
                             className={`p-4 max-w-[85%] ${msg.role === "user"
-                                    ? "bg-teal-500 text-white"
-                                    : "bg-white shadow-md"
+                                ? "bg-teal-500 text-white"
+                                : "bg-white shadow-md"
                                 }`}
                             shadow="sm"
                             radius="md"
@@ -296,11 +312,17 @@ const BookingAssistant = ({ isVisible }) => {
                                 <Text size="sm" className={msg.role === "user" ? "text-white" : ""}>
                                     {msg.content}
                                 </Text>
+                            ) : msg.isFormatted ? (
+                                <div className="prose prose-sm max-w-none prose-teal">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {msg.content}
+                                    </ReactMarkdown>
+                                </div>
                             ) : msg.role === "user" ? (
                                 <Text size="sm" className="text-white">{msg.content}</Text>
-                            ) : (
+                            ) : msg.formatted ? (
                                 renderFormattedResponse(msg.formatted)
-                            )}
+                            ) : null}
                         </Paper>
                     </div>
                 ))}

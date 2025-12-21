@@ -3,12 +3,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from backend.models import (
-    Service,
-    Resource,
-    WorkingHours,
-    Slot,
-)
+from backend.models import Service, Resource, WorkingHours, Slot, Booking
+
 
 User = get_user_model()
 
@@ -22,6 +18,7 @@ class Command(BaseCommand):
         # ------------------------------------------------
         # CLEAN EXISTING DATA (order matters)
         # ------------------------------------------------
+        Booking.objects.all().delete()
         Slot.objects.all().delete()
         WorkingHours.objects.all().delete()
         Resource.objects.all().delete()

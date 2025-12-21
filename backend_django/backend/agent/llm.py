@@ -26,6 +26,12 @@ def run_llm(user_message, conversation_context=None):
         + json.dumps(conversation_context or {})
     )
 
+    print("\n" + "="*50)
+    print("LLM INPUT:")
+    print("User message:", user_message)
+    print("Context:", json.dumps(conversation_context or {}, indent=2))
+    print("="*50 + "\n")
+
     try:
         response = client.models.generate_content(
             model=MODEL_NAME,
@@ -38,6 +44,11 @@ def run_llm(user_message, conversation_context=None):
 
         text = response.text.strip()
         llm_output = json.loads(text)
+
+        print("\n" + "="*50)
+        print("LLM OUTPUT:")
+        print(json.dumps(llm_output, indent=2))
+        print("="*50 + "\n")
 
         if "message" in llm_output:
             return llm_output
@@ -54,4 +65,5 @@ def run_llm(user_message, conversation_context=None):
         return llm_output
 
     except Exception as e:
+        print(f"LLM ERROR: {str(e)}")
         return {"message": f"LLM error: {str(e)}"}
